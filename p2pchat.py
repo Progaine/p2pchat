@@ -15,7 +15,6 @@ def sender(user_name, ip_address, port):
 	clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 	application_message = build_message(user_name, "JOIN", "")
-	application_message = application_message.encode("utf-8")
 
 	clientSocket.sendto(application_message,(ip_address, port))
 
@@ -24,21 +23,25 @@ def sender(user_name, ip_address, port):
 
 		if user_message == "/leave":
 			application_message = build_message(user_name, "LEAVE", "")
-		
+			clientSocket.sendto(application_message,(ip_address, port))
+
+			application_message = build_message(user_name, "QUIT", "")
+			clientSocket.sendto(application_message,("localhost", port))
+
+		elif user_message == "/who":
+			application_message = build_message(user_name, "WHO", "")
+			clientSocket.sendto(application_message,("localhost", port))
 		else:
-			application_message = build_message(user_name, "TALK", user_message)
-
-		application_message = application_message.encode("utf-8")
-
-		clientSocket.sendto(application_message,(ip_address, port))
+			application_message = build_message(user_name, "TALK", user_message)	
+			clientSocket.sendto(application_message,(ip_address, port))
 
 def receiver(port):
 	serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	serverSocket.bind(("", port))
+	connected_users = []
 
 	while True:
 		application_message, clientAddress = serverSocket.recvfrom(2048)
-		application_message = application_message.decode("utf-8")
 
 		user_name, command, user_message = parse_message(application_message)
 
@@ -46,19 +49,24 @@ def receiver(port):
 
 		if command == "JOIN":
 			messageToPrint = "{} {} joined!".format(datetime.datetime.now(), user_name)
-
+			connected_users.append(user_name)
 		elif command == "TALK":
 			messageToPrint = "{} [{}]: {}".format(datetime.datetime.now(), user_name, user_message)
-
 		elif command == "LEAVE":
 			messageToPrint = "{} {} left!".format(datetime.datetime.now(), user_name)
+			connected_users.remove(user_name)
+		elif command == "QUIT":
+			messageToPrint = "Bye now!"
+		elif command == "WHO":
+			messageToPrint = "{} Connected users: {}".format(datetime.datetime.now(), connected_users)
 
 		print(messageToPrint)
 
 def build_message(name, command, message):
-	return "user:" + name + "\ncommand:" + command + "\nmessage:" + message + "\n\n"
+	return ("user:" + name + "\ncommand:" + command + "\nmessage:" + message + "\n\n").encode("utf-8")
 
 def parse_message(message):
+	message = message.decode("utf-8")
 	user = message.split("\n")[0].split("user:")[1]
 	command = message.split("\n")[1].split("command:")[1]
 	message = message.split("\n")[2].split("message:")[1]
