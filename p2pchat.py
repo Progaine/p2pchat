@@ -14,7 +14,8 @@ def sender(user_name, ip_address, port):
 	clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-	application_message = build_message(user_name, "JOIN", "")
+	channel = "general"
+	application_message = build_message(user_name, "JOIN", channel, "")
 
 	clientSocket.sendto(application_message,(ip_address, port))
 
@@ -22,21 +23,25 @@ def sender(user_name, ip_address, port):
 		user_message = input("")
 
 		if user_message == "/leave":
-			application_message = build_message(user_name, "LEAVE", "")
+			application_message = build_message(user_name, "LEAVE", channel, "")
 			clientSocket.sendto(application_message,(ip_address, port))
 
-			application_message = build_message(user_name, "QUIT", "")
+			application_message = build_message(user_name, "QUIT", channel, "")
 			clientSocket.sendto(application_message,("localhost", port))
 		elif user_message == "/who":
-			application_message = build_message(user_name, "WHO", "")
+			application_message = build_message(user_name, "WHO", channel, "")
 			clientSocket.sendto(application_message,("localhost", port))
 		elif user_message[:8] == "/private":
 			private_user_name = user_message[9:]
 			private_user_message = input("Private message to " + user_name + ": ")
-			application_message = build_message(private_user_name, "PRIVATE-TALK", private_user_message)
+			application_message = build_message(private_user_name, "PRIVATE-TALK", channel, private_user_message)
+			clientSocket.sendto(application_message,("localhost", port))
+		elif user_message[:8] == "/channel":
+			channel = user_message[9:]
+			application_message = build_message(user_name, "CHANNEL", channel, "")
 			clientSocket.sendto(application_message,("localhost", port))
 		else:
-			application_message = build_message(user_name, "TALK", user_message)	
+			application_message = build_message(user_name, "TALK", channel, user_message)	
 			clientSocket.sendto(application_message,(ip_address, port))
 
 def receiver(my_name, ip_address, port):
@@ -44,21 +49,22 @@ def receiver(my_name, ip_address, port):
 	serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	serverSocket.bind(("", port))
 	connected_users = dict()
+	channel = "general"
 
 	while True:
 		application_message, clientAddress = serverSocket.recvfrom(2048)
 
-		user_name, command, user_message = parse_message(application_message)
+		user_name, command, user_channel, user_message = parse_message(application_message)
 
 		messageToPrint = ""
 
 		if command == "JOIN":
 			messageToPrint = "{} {} joined!".format(datetime.datetime.now(), user_name)
 			connected_users[user_name] = clientAddress[0]
-			application_message = build_message(my_name, "PING", "")
+			application_message = build_message(my_name, "PING", channel, "")
 			serverSocket.sendto(application_message, (ip_address, port))
-		elif command == "TALK":
-			messageToPrint = "{} [{}]: {}".format(datetime.datetime.now(), user_name, user_message)
+		elif command == "TALK" and user_channel == channel:
+			messageToPrint = "{} [{} #{}]: {}".format(datetime.datetime.now(), user_name, channel, user_message)
 		elif command == "LEAVE":
 			messageToPrint = "{} {} left!".format(datetime.datetime.now(), user_name)
 			connected_users.pop(user_name, None)
@@ -71,21 +77,26 @@ def receiver(my_name, ip_address, port):
 				connected_users[user_name] = clientAddress[0]
 		elif command == "PRIVATE-TALK":
 			if clientAddress[0] == "127.0.0.1":
-				application_message = build_message(my_name, "PRIVATE-TALK", user_message)
+				application_message = build_message(my_name, "PRIVATE-TALK", channel, user_message)
 				serverSocket.sendto(application_message, (connected_users[user_name], port))
 			else:
 				messageToPrint = "{} [{}] (PRIVATE): {}".format(datetime.datetime.now(), user_name, user_message)
+		elif command == "CHANNEL":
+			channel = user_channel
+			messageToPrint = "{} Switched to channel {}".format(datetime.datetime.now(), channel)
 
-		print(messageToPrint)
+		if messageToPrint != "":
+			print(messageToPrint)
 
-def build_message(name, command, message):
-	return ("user:" + name + "\ncommand:" + command + "\nmessage:" + message + "\n\n").encode("utf-8")
+def build_message(name, command, channel, message):
+	return ("user:" + name + "\ncommand:" + command + "\nchannel:" + channel + "\nmessage:" + message + "\n\n").encode("utf-8")
 
 def parse_message(message):
 	message = message.decode("utf-8")
 	user = message.split("\n")[0].split("user:")[1]
 	command = message.split("\n")[1].split("command:")[1]
-	message = message.split("\n")[2].split("message:")[1]
-	return (user, command, message)
+	channel = message.split("\n")[2].split("channel:")[1]
+	message = message.split("\n")[3].split("message:")[1]
+	return (user, command, channel, message)
 
 p2pchat()
