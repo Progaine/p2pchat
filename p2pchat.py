@@ -30,6 +30,11 @@ def sender(user_name, ip_address, port):
 		elif user_message == "/who":
 			application_message = build_message(user_name, "WHO", "")
 			clientSocket.sendto(application_message,("localhost", port))
+		elif user_message[:8] == "/private":
+			user_name = user_message[9:]
+			user_message = input("Private message to " + user_name + ": ")
+			application_message = build_message(user_name, "PRIVATE-TALK", user_message)
+			clientSocket.sendto(application_message,("localhost", port))
 		else:
 			application_message = build_message(user_name, "TALK", user_message)	
 			clientSocket.sendto(application_message,(ip_address, port))
@@ -38,7 +43,7 @@ def receiver(my_name, ip_address, port):
 	serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	serverSocket.bind(("", port))
-	connected_users = []
+	connected_users = dict()
 
 	while True:
 		application_message, clientAddress = serverSocket.recvfrom(2048)
@@ -49,21 +54,27 @@ def receiver(my_name, ip_address, port):
 
 		if command == "JOIN":
 			messageToPrint = "{} {} joined!".format(datetime.datetime.now(), user_name)
-			connected_users.append(user_name)
+			connected_users[user_name] = clientAddress[0]
 			application_message = build_message(my_name, "PING", "")
 			serverSocket.sendto(application_message, (ip_address, port))
 		elif command == "TALK":
 			messageToPrint = "{} [{}]: {}".format(datetime.datetime.now(), user_name, user_message)
 		elif command == "LEAVE":
 			messageToPrint = "{} {} left!".format(datetime.datetime.now(), user_name)
-			connected_users.remove(user_name)
+			connected_users.pop(user_name, None)
 		elif command == "QUIT":
 			messageToPrint = "Bye now!"
 		elif command == "WHO":
-			messageToPrint = "{} Connected users: {}".format(datetime.datetime.now(), connected_users)
+			messageToPrint = "{} Connected users: {}".format(datetime.datetime.now(), list(connected_users))
 		elif command == "PING":
 			if user_name not in connected_users:
-				connected_users.append(user_name)
+				connected_users[user_name] = clientAddress[0]
+		elif command == "PRIVATE-TALK":
+			if clientAddress[0] == "127.0.0.1":
+				application_message = build_message(my_name, "PRIVATE-TALK", user_message)
+				serverSocket.sendto(application_message, (connected_users[user_name], port))
+			else:
+				messageToPrint = "{} [{}] (PRIVATE): {}".format(datetime.datetime.now(), user_name, user_message)
 
 		print(messageToPrint)
 
