@@ -7,8 +7,8 @@ def p2pchat():
 	serverPort = 8007
 
 	user_name = input('Enter your name: ')
+	threading.Thread(target=receiver, args=(user_name, ip_address, serverPort)).start()
 	threading.Thread(target=sender, args=(user_name, ip_address, serverPort)).start()
-	threading.Thread(target=receiver, args=(serverPort,)).start()
 
 def sender(user_name, ip_address, port):
 	clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -27,7 +27,6 @@ def sender(user_name, ip_address, port):
 
 			application_message = build_message(user_name, "QUIT", "")
 			clientSocket.sendto(application_message,("localhost", port))
-
 		elif user_message == "/who":
 			application_message = build_message(user_name, "WHO", "")
 			clientSocket.sendto(application_message,("localhost", port))
@@ -35,8 +34,9 @@ def sender(user_name, ip_address, port):
 			application_message = build_message(user_name, "TALK", user_message)	
 			clientSocket.sendto(application_message,(ip_address, port))
 
-def receiver(port):
+def receiver(my_name, ip_address, port):
 	serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	serverSocket.bind(("", port))
 	connected_users = []
 
@@ -50,6 +50,8 @@ def receiver(port):
 		if command == "JOIN":
 			messageToPrint = "{} {} joined!".format(datetime.datetime.now(), user_name)
 			connected_users.append(user_name)
+			application_message = build_message(my_name, "PING", "")
+			serverSocket.sendto(application_message, (ip_address, port))
 		elif command == "TALK":
 			messageToPrint = "{} [{}]: {}".format(datetime.datetime.now(), user_name, user_message)
 		elif command == "LEAVE":
@@ -59,6 +61,9 @@ def receiver(port):
 			messageToPrint = "Bye now!"
 		elif command == "WHO":
 			messageToPrint = "{} Connected users: {}".format(datetime.datetime.now(), connected_users)
+		elif command == "PING":
+			if user_name not in connected_users:
+				connected_users.append(user_name)
 
 		print(messageToPrint)
 
