@@ -4,11 +4,11 @@ import datetime
 
 def p2pchat():
 	ip_address = '255.255.255.255'
-	serverPort = 8007
+	server_port = 8007
 
 	user_name = input('Enter your name: ')
-	threading.Thread(target=receiver, args=(user_name, ip_address, serverPort)).start()
-	threading.Thread(target=sender, args=(user_name, ip_address, serverPort)).start()
+	threading.Thread(target=receiver, args=(user_name, ip_address, server_port)).start()
+	threading.Thread(target=sender, args=(user_name, ip_address, server_port)).start()
 
 def sender(user_name, ip_address, port):
 	clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -31,9 +31,9 @@ def sender(user_name, ip_address, port):
 			application_message = build_message(user_name, "WHO", "")
 			clientSocket.sendto(application_message,("localhost", port))
 		elif user_message[:8] == "/private":
-			user_name = user_message[9:]
-			user_message = input("Private message to " + user_name + ": ")
-			application_message = build_message(user_name, "PRIVATE-TALK", user_message)
+			private_user_name = user_message[9:]
+			private_user_message = input("Private message to " + user_name + ": ")
+			application_message = build_message(private_user_name, "PRIVATE-TALK", private_user_message)
 			clientSocket.sendto(application_message,("localhost", port))
 		else:
 			application_message = build_message(user_name, "TALK", user_message)	
