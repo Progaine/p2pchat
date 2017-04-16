@@ -21,8 +21,13 @@ def sender(user_name, ip_address, port):
 
 	while True:
 		user_message = input("")
+
+		if user_message == "/leave":
+			application_message = build_message(user_name, "LEAVE", "")
 		
-		application_message = build_message(user_name, "TALK", user_message)
+		else:
+			application_message = build_message(user_name, "TALK", user_message)
+
 		application_message = application_message.encode("utf-8")
 
 		clientSocket.sendto(application_message,(ip_address, port))
@@ -37,7 +42,6 @@ def receiver(port):
 
 		user_name, command, user_message = parse_message(application_message)
 
-
 		messageToPrint = ""
 
 		if command == "JOIN":
@@ -45,6 +49,9 @@ def receiver(port):
 
 		elif command == "TALK":
 			messageToPrint = "{} [{}]: {}".format(datetime.datetime.now(), user_name, user_message)
+
+		elif command == "LEAVE":
+			messageToPrint = "{} {} left!".format(datetime.datetime.now(), user_name)
 
 		print(messageToPrint)
 
