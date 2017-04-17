@@ -28,6 +28,7 @@ def sender(user_name, ip_address, port):
 
 			application_message = build_message(user_name, "QUIT", channel, "")
 			clientSocket.sendto(application_message,("localhost", port))
+			return
 		elif user_message == "/who":
 			application_message = build_message(user_name, "WHO", channel, "")
 			clientSocket.sendto(application_message,("localhost", port))
@@ -70,6 +71,8 @@ def receiver(my_name, ip_address, port):
 			connected_users.pop(user_name, None)
 		elif command == "QUIT":
 			messageToPrint = "Bye now!"
+			print(messageToPrint)
+			return
 		elif command == "WHO":
 			messageToPrint = "{} Connected users: {}".format(datetime.datetime.now(), list(connected_users))
 		elif command == "PING":
