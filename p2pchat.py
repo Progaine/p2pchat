@@ -33,7 +33,7 @@ def sender(user_name, ip_address, port):
 			clientSocket.sendto(application_message,("localhost", port))
 		elif user_message[:8] == "/private":
 			private_user_name = user_message[9:]
-			private_user_message = input("Private message to " + user_name + ": ")
+			private_user_message = input("Private message to " + private_user_name + ": ")
 			application_message = build_message(private_user_name, "PRIVATE-TALK", channel, private_user_message)
 			clientSocket.sendto(application_message,("localhost", port))
 		elif user_message[:8] == "/channel":
