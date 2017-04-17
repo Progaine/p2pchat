@@ -76,9 +76,12 @@ def receiver(my_name, ip_address, port):
 			if user_name not in connected_users:
 				connected_users[user_name] = clientAddress[0]
 		elif command == "PRIVATE-TALK":
-			if clientAddress[0] == "127.0.0.1":
-				application_message = build_message(my_name, "PRIVATE-TALK", channel, user_message)
-				serverSocket.sendto(application_message, (connected_users[user_name], port))
+			if clientAddress[0] == "127.0.0.1":		
+				if user_name in connected_users:
+					application_message = build_message(my_name, "PRIVATE-TALK", channel, user_message)
+					serverSocket.sendto(application_message, (connected_users[user_name], port))
+				else:
+					messageToPrint = "{} does not exist.".format(user_name)
 			else:
 				messageToPrint = "{} [{}] (PRIVATE): {}".format(datetime.datetime.now(), user_name, user_message)
 		elif command == "CHANNEL":
